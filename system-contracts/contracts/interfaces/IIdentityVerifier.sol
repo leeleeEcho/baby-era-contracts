@@ -24,4 +24,21 @@ interface IIdentityVerifier {
     function isTrustedIssuer(address issuer) external view returns (bool);
     function setVerificationMode(VerificationMode mode) external;
     function currentMode() external view returns (VerificationMode);
+
+    // ── ZK Proof Verification ───────────────────────────────────
+    event ZKProofVerified(address indexed identity, uint8 indexed circuitType);
+    event CircuitVerifierSet(uint8 indexed circuitType, address verifier);
+
+    function verifyZKProof(
+        address identity, uint8 circuitType,
+        uint256[2] calldata _pA, uint256[2][2] calldata _pB, uint256[2] calldata _pC,
+        uint256[] calldata publicInputs
+    ) external returns (bool);
+    function setCircuitVerifier(uint8 circuitType, address verifier) external;
+    function getCircuitVerifier(uint8 circuitType) external view returns (address);
+
+    // ── Credit Score Queries ────────────────────────────────────
+    function getPersonalCreditScore(address identity) external view returns (uint256);
+    function getOrgCreditScore(address identity) external view returns (uint256);
+    function getCompositeCreditScore(address identity) external view returns (uint256);
 }
