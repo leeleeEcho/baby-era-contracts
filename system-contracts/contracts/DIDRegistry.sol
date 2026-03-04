@@ -3,7 +3,8 @@ pragma solidity ^0.8.28;
 
 import {IDIDRegistry} from "./interfaces/IDIDRegistry.sol";
 import {SystemContractBase} from "./abstract/SystemContractBase.sol";
-import {CREDENTIAL_REGISTRY_SYSTEM_CONTRACT, IDENTITY_VERIFIER_SYSTEM_CONTRACT} from "./Constants.sol";
+import {CREDENTIAL_REGISTRY_SYSTEM_CONTRACT, IDENTITY_VERIFIER_SYSTEM_CONTRACT, L1_MESSENGER_CONTRACT} from "./Constants.sol";
+import {IL1Messenger} from "./interfaces/IL1Messenger.sol";
 
 /// @title DIDRegistry — BabyDriver Decentralized Identity Registry
 /// @notice System contract at 0x8017. Manages did:ethr:baby identities.
@@ -72,6 +73,10 @@ contract DIDRegistry is IDIDRegistry, SystemContractBase {
 
         _nonces[msg.sender] = 1;
         emit DIDCreated(msg.sender, msg.sender);
+
+        L1_MESSENGER_CONTRACT.sendToL1(
+            abi.encode(uint8(0), msg.sender, verificationMethods, serviceEndpointHash, _nonces[msg.sender])
+        );
     }
 
     /// @notice Update the DID document for msg.sender.
@@ -97,6 +102,10 @@ contract DIDRegistry is IDIDRegistry, SystemContractBase {
             msg.sender,
             keccak256(abi.encode(verificationMethods, serviceEndpointHash))
         );
+
+        L1_MESSENGER_CONTRACT.sendToL1(
+            abi.encode(uint8(1), msg.sender, verificationMethods, serviceEndpointHash, _nonces[msg.sender])
+        );
     }
 
     /// @notice Deactivate the DID for msg.sender. Irreversible.
@@ -105,6 +114,10 @@ contract DIDRegistry is IDIDRegistry, SystemContractBase {
         _documents[msg.sender].updated = uint64(block.timestamp);
         _nonces[msg.sender]++;
         emit DIDDeactivated(msg.sender);
+
+        L1_MESSENGER_CONTRACT.sendToL1(
+            abi.encode(uint8(2), msg.sender, _nonces[msg.sender])
+        );
     }
 
     // ── Delegation ─────────────────────────────────────────────

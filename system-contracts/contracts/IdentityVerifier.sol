@@ -3,7 +3,8 @@ pragma solidity ^0.8.28;
 
 import {IIdentityVerifier} from "./interfaces/IIdentityVerifier.sol";
 import {SystemContractBase} from "./abstract/SystemContractBase.sol";
-import {DID_REGISTRY_SYSTEM_CONTRACT, CREDENTIAL_REGISTRY_SYSTEM_CONTRACT, ORACLE_HUB_SYSTEM_CONTRACT} from "./Constants.sol";
+import {DID_REGISTRY_SYSTEM_CONTRACT, CREDENTIAL_REGISTRY_SYSTEM_CONTRACT, ORACLE_HUB_SYSTEM_CONTRACT, L1_MESSENGER_CONTRACT} from "./Constants.sol";
+import {IL1Messenger} from "./interfaces/IL1Messenger.sol";
 import {IDIDRegistry} from "./interfaces/IDIDRegistry.sol";
 import {ICredentialRegistry} from "./interfaces/ICredentialRegistry.sol";
 
@@ -97,6 +98,10 @@ contract IdentityVerifier is IIdentityVerifier, SystemContractBase {
 
         _compliance[identity][requirement] = status;
         emit ComplianceUpdated(identity, requirement, status);
+
+        L1_MESSENGER_CONTRACT.sendToL1(
+            abi.encode(uint8(5), identity, requirement, status)
+        );
     }
 
     // ── Admin ──────────────────────────────────────────────────
@@ -106,6 +111,10 @@ contract IdentityVerifier is IIdentityVerifier, SystemContractBase {
         if (_trustedIssuers[issuer]) revert AlreadyTrustedIssuer(issuer);
         _trustedIssuers[issuer] = true;
         emit TrustedIssuerAdded(issuer);
+
+        L1_MESSENGER_CONTRACT.sendToL1(
+            abi.encode(uint8(6), issuer)
+        );
     }
 
     /// @notice Remove a trusted credential issuer.
@@ -113,6 +122,10 @@ contract IdentityVerifier is IIdentityVerifier, SystemContractBase {
         if (!_trustedIssuers[issuer]) revert NotTrustedIssuer(issuer);
         _trustedIssuers[issuer] = false;
         emit TrustedIssuerRemoved(issuer);
+
+        L1_MESSENGER_CONTRACT.sendToL1(
+            abi.encode(uint8(7), issuer)
+        );
     }
 
     /// @notice Check if an address is a trusted issuer.

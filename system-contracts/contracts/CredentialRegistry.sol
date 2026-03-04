@@ -3,7 +3,8 @@ pragma solidity ^0.8.28;
 
 import {ICredentialRegistry} from "./interfaces/ICredentialRegistry.sol";
 import {SystemContractBase} from "./abstract/SystemContractBase.sol";
-import {DID_REGISTRY_SYSTEM_CONTRACT} from "./Constants.sol";
+import {DID_REGISTRY_SYSTEM_CONTRACT, L1_MESSENGER_CONTRACT} from "./Constants.sol";
+import {IL1Messenger} from "./interfaces/IL1Messenger.sol";
 import {IDIDRegistry} from "./interfaces/IDIDRegistry.sol";
 
 /// @title CredentialRegistry — BabyDriver Verifiable Credential Registry
@@ -79,6 +80,10 @@ contract CredentialRegistry is ICredentialRegistry, SystemContractBase {
         _heldBySubject[subject].push(credentialId);
 
         emit CredentialIssued(credentialId, msg.sender, subject, credentialType);
+
+        L1_MESSENGER_CONTRACT.sendToL1(
+            abi.encode(uint8(3), credentialId, msg.sender, subject, credentialType, claimHash, issuedAt, expiresAt)
+        );
     }
 
     // ── Revocation ─────────────────────────────────────────────
@@ -92,6 +97,10 @@ contract CredentialRegistry is ICredentialRegistry, SystemContractBase {
 
         _revoked[credentialId] = true;
         emit CredentialRevoked(credentialId, msg.sender);
+
+        L1_MESSENGER_CONTRACT.sendToL1(
+            abi.encode(uint8(4), credentialId, msg.sender)
+        );
     }
 
     // ── Queries ────────────────────────────────────────────────
