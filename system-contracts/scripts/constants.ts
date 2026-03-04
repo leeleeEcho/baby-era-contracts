@@ -265,6 +265,31 @@ export const SYSTEM_CONTRACTS: ISystemContracts = {
     lang: Language.Solidity,
     location: SourceLocation.L1Contracts,
   },
+  // BabyDriver: Oracle Hub system contract
+  oracleHub: {
+    address: "0x0000000000000000000000000000000000008016",
+    codeName: "OracleHub",
+    lang: Language.Solidity,
+    location: SourceLocation.SystemContracts,
+  },
+  didRegistry: {
+    address: "0x0000000000000000000000000000000000008017",
+    codeName: "DIDRegistry",
+    lang: Language.Solidity,
+    location: SourceLocation.SystemContracts,
+  },
+  credentialRegistry: {
+    address: "0x0000000000000000000000000000000000008018",
+    codeName: "CredentialRegistry",
+    lang: Language.Solidity,
+    location: SourceLocation.SystemContracts,
+  },
+  identityVerifier: {
+    address: "0x0000000000000000000000000000000000008019",
+    codeName: "IdentityVerifier",
+    lang: Language.Solidity,
+    location: SourceLocation.SystemContracts,
+  },
 } as const;
 
 export const EIP712_TX_ID = 113;

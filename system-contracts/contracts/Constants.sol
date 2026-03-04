@@ -108,6 +108,18 @@ address constant EVM_GAS_MANAGER = address(SYSTEM_CONTRACTS_OFFSET + 0x13);
 address constant EVM_PREDEPLOYS_MANAGER = address(SYSTEM_CONTRACTS_OFFSET + 0x14);
 IEvmHashesStorage constant EVM_HASHES_STORAGE = IEvmHashesStorage(address(SYSTEM_CONTRACTS_OFFSET + 0x15));
 
+/// @dev BabyDriver Oracle Hub — native price oracle system contract
+address constant ORACLE_HUB_SYSTEM_CONTRACT = address(SYSTEM_CONTRACTS_OFFSET + 0x16);
+
+/// @dev The address of the DIDRegistry system contract.
+address constant DID_REGISTRY_SYSTEM_CONTRACT = address(SYSTEM_CONTRACTS_OFFSET + 0x17);
+
+/// @dev The address of the CredentialRegistry system contract.
+address constant CREDENTIAL_REGISTRY_SYSTEM_CONTRACT = address(SYSTEM_CONTRACTS_OFFSET + 0x18);
+
+/// @dev The address of the IdentityVerifier system contract.
+address constant IDENTITY_VERIFIER_SYSTEM_CONTRACT = address(SYSTEM_CONTRACTS_OFFSET + 0x19);
+
 ICreate2Factory constant L2_CREATE2_FACTORY = ICreate2Factory(address(USER_CONTRACTS_OFFSET));
 IL2AssetRouter constant L2_ASSET_ROUTER = IL2AssetRouter(address(USER_CONTRACTS_OFFSET + 0x03));
 IBridgehub constant L2_BRIDGE_HUB = IBridgehub(address(USER_CONTRACTS_OFFSET + 0x02));
