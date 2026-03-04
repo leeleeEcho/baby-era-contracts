@@ -128,8 +128,25 @@ object "Bootloader" {
 
             /// @dev The slot from which the scratch space starts.
             /// Scratch space is used for various temporary values
-            function SCRATCH_SPACE_BEGIN_SLOT() -> ret {
+            /// @dev BabyDriver: Oracle calldata starts at slot 8 (after operator batch params).
+            /// The State Keeper writes pre-ABI-encoded calldata for OracleHub.batchUpdatePrices()
+            /// here. Format: [calldataLength (32 bytes), calldataBytes... (up to 736 bytes)]
+            function ORACLE_CALLDATA_BEGIN_SLOT() -> ret {
                 ret := 8
+            }
+
+            function ORACLE_CALLDATA_BEGIN_BYTE() -> ret {
+                ret := mul(ORACLE_CALLDATA_BEGIN_SLOT(), 32)
+            }
+
+            /// @dev Maximum slots for Oracle calldata (768 bytes = 24 slots).
+            /// Supports up to 5 price feeds per batch.
+            function ORACLE_CALLDATA_MAX_SLOTS() -> ret {
+                ret := 24
+            }
+
+            function SCRATCH_SPACE_BEGIN_SLOT() -> ret {
+                ret := add(ORACLE_CALLDATA_BEGIN_SLOT(), ORACLE_CALLDATA_MAX_SLOTS())
             }
 
             /// @dev The byte from which the scratch space starts.
@@ -662,6 +679,11 @@ object "Bootloader" {
 
             function L2_INTEROP_ROOT_STORAGE() -> ret {
                 ret := 0x0000000000000000000000000000000000010008
+            }
+
+            /// @dev BabyDriver: Oracle Hub system contract address (0x8016)
+            function ORACLE_HUB_ADDR() -> ret {
+                ret := 0x0000000000000000000000000000000000008016
             }
 
             /// @dev The minimal allowed distance in bytes between the pointer to the compressed data
@@ -3206,6 +3228,34 @@ object "Bootloader" {
                 }
             }
 
+            /// @notice BabyDriver: Updates Oracle prices by forwarding pre-encoded calldata
+            /// to the OracleHub system contract. Called after setNewBatch().
+            /// @dev The State Keeper writes ABI-encoded calldata for batchUpdatePrices() at
+            /// ORACLE_CALLDATA_BEGIN_BYTE(). First word is calldata length (0 = skip).
+            /// Failures are logged but do not revert batch processing.
+            function updateOraclePrices() {
+                let calldataLen := mload(ORACLE_CALLDATA_BEGIN_BYTE())
+
+                // Skip if no Oracle data provided (calldataLen == 0)
+                if calldataLen {
+                    let calldataPtr := add(ORACLE_CALLDATA_BEGIN_BYTE(), 32)
+
+                    let success := call(
+                        gas(),
+                        ORACLE_HUB_ADDR(),
+                        0,
+                        calldataPtr,
+                        calldataLen,
+                        0,
+                        0
+                    )
+
+                    if iszero(success) {
+                        debugLog("Oracle price update failed, continuing batch", 0)
+                    }
+                }
+            }
+
             /// @notice Sets the context information for the current L2 block.
             /// @param txId The index of the transaction in the batch for which to get the L2 block information.
             function setL2Block(txId) {
@@ -4502,6 +4552,9 @@ object "Bootloader" {
 
                 setNewBatch(PREV_BATCH_HASH, NEW_BATCH_TIMESTAMP, NEW_BATCH_NUMBER, EXPECTED_BASE_FEE)
 
+                // BabyDriver: Update Oracle prices after batch initialization
+                updateOraclePrices()
+
                 <!-- @endif -->
 
                 <!-- @if BOOTLOADER_TYPE=='playground_batch' -->
@@ -4515,6 +4568,9 @@ object "Bootloader" {
                 default {
                     setNewBatch(PREV_BATCH_HASH, NEW_BATCH_TIMESTAMP, NEW_BATCH_NUMBER, EXPECTED_BASE_FEE)
                 }
+
+                // BabyDriver: Update Oracle prices after batch initialization
+                updateOraclePrices()
 
                 GAS_PRICE_PER_PUBDATA := gasPerPubdataFromBaseFee(EXPECTED_BASE_FEE, FAIR_PUBDATA_PRICE)
 
