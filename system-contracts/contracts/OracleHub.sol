@@ -57,13 +57,13 @@ contract OracleHub is IOracleHub, SystemContractBase {
     // ==================== Initialization ====================
 
     /// @notice Called once during genesis force-deployment to set initial config.
-    /// @dev Uses onlyCallFromBootloader since genesis deploys run as bootloader.
+    /// @dev Uses onlySystemCall to allow post-genesis initialization via system call.
     function initialize(
         bytes32[] calldata symbolHashes,
         uint256 _stalenessThreshold,
         uint256 _deviationThreshold,
         uint8 _minSourceCount
-    ) external onlyCallFromBootloader {
+    ) external onlySystemCall {
         // Guard: only init once
         require(stalenessThreshold == 0, "OracleHub: already initialized");
         require(_stalenessThreshold > 0, "OracleHub: zero staleness");
