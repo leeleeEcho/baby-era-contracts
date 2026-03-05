@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 /**
  * @title IOracleHub
  * @notice BabyDriver native Oracle system contract interface.
- *         Provides on-chain price feeds updated by the bootloader at each batch.
+ *         Provides on-chain price feeds updated by the operator at each batch.
  *         All DApps read for free (view calls).
  */
 interface IOracleHub {
@@ -21,8 +21,9 @@ interface IOracleHub {
     event SymbolAdded(bytes32 indexed symbolHash);
     event SymbolRemoved(bytes32 indexed symbolHash);
     event ConfigUpdated(uint256 stalenessThreshold, uint256 deviationThreshold, uint8 minSourceCount);
+    event OperatorUpdated(address indexed operator);
 
-    // --- Price Updates (bootloader only) ---
+    // --- Price Updates (operator only) ---
     function batchUpdatePrices(
         bytes32[] calldata symbolHashes,
         uint128[] calldata prices,
@@ -39,4 +40,6 @@ interface IOracleHub {
     function addSymbol(bytes32 symbolHash) external;
     function removeSymbol(bytes32 symbolHash) external;
     function setConfig(uint256 stalenessThreshold, uint256 deviationThreshold, uint8 minSourceCount) external;
+    function setOperator(address _operator) external;
+    function operator() external view returns (address);
 }

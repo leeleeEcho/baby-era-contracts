@@ -9,13 +9,13 @@ import {ORACLE_HUB_SYSTEM_CONTRACT} from "./Constants.sol";
  * @title OracleHub
  * @notice BabyDriver native Oracle — L2 system contract at address 0x8016.
  *
- * Price data is injected by the bootloader at the start of each L1 Batch.
+ * Price data is injected by the operator via synthetic L2 transaction at the start of each L1 Batch.
  * All DApps can read prices via view calls at zero gas cost.
  *
  * Design decisions:
  *   - Uses bytes32 symbol hashes instead of string keys (gas efficient in system contract context)
  *   - Packs price + timestamp into a single struct to minimize storage slots
- *   - Only the bootloader can update prices (onlyCallFromBootloader)
+ *   - Only the operator can update prices (onlyOperator)
  *   - Admin operations require system call privileges
  */
 contract OracleHub is IOracleHub, SystemContractBase {
@@ -43,6 +43,17 @@ contract OracleHub is IOracleHub, SystemContractBase {
 
     uint256 private constant BPS_DENOMINATOR = 10_000;
 
+    // ==================== Operator ====================
+
+    /// @notice Operator address authorized to call batchUpdatePrices
+    address public operator;
+
+    /// @notice Only the operator can call this function
+    modifier onlyOperator() {
+        require(msg.sender == operator, "OracleHub: not operator");
+        _;
+    }
+
     // ==================== Initialization ====================
 
     /// @notice Called once during genesis force-deployment to set initial config.
@@ -66,18 +77,22 @@ contract OracleHub is IOracleHub, SystemContractBase {
             _supportedSymbols.push(symbolHashes[i]);
             emit SymbolAdded(symbolHashes[i]);
         }
+
+        // Set initial operator to the transaction origin (deployer/bootloader)
+        operator = tx.origin;
+        emit OperatorUpdated(tx.origin);
     }
 
-    // ==================== Price Updates (Bootloader Only) ====================
+    // ==================== Price Updates (Operator Only) ====================
 
     /// @inheritdoc IOracleHub
-    /// @dev Called by the bootloader at the start of each L1 Batch via setNewBatch hook.
+    /// @dev Called by the operator at the start of each L1 Batch via synthetic L2 transaction.
     function batchUpdatePrices(
         bytes32[] calldata symbolHashes,
         uint128[] calldata prices,
         uint64[] calldata confidences,
         uint8[] calldata sourceCounts
-    ) external onlyCallFromBootloader {
+    ) external onlyOperator {
         uint256 len = symbolHashes.length;
         require(
             len == prices.length && len == confidences.length && len == sourceCounts.length,
@@ -153,6 +168,13 @@ contract OracleHub is IOracleHub, SystemContractBase {
         minSourceCount = _minSourceCount;
 
         emit ConfigUpdated(_stalenessThreshold, _deviationThreshold, _minSourceCount);
+    }
+
+    /// @notice Set the operator address. Only callable by system call (admin).
+    function setOperator(address _operator) external onlySystemCall {
+        require(_operator != address(0), "OracleHub: zero operator");
+        operator = _operator;
+        emit OperatorUpdated(_operator);
     }
 
     // ==================== View Helpers ====================
