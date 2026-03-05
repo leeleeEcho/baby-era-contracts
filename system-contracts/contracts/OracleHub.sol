@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {IOracleHub} from "./interfaces/IOracleHub.sol";
 import {SystemContractBase} from "./abstract/SystemContractBase.sol";
+import {SystemContractHelper} from "./libraries/SystemContractHelper.sol";
 import {ORACLE_HUB_SYSTEM_CONTRACT} from "./Constants.sol";
 
 /**
@@ -56,14 +57,15 @@ contract OracleHub is IOracleHub, SystemContractBase {
 
     // ==================== Initialization ====================
 
-    /// @notice Called once during genesis force-deployment to set initial config.
-    /// @dev Uses onlySystemCall to allow post-genesis initialization via system call.
+    /// @notice Called once to set initial config. One-time only (stalenessThreshold guard).
+    /// @dev No access control beyond the one-time guard — in production, called during
+    ///      genesis via bootloader force-deployment. Post-genesis init uses governor EOA.
     function initialize(
         bytes32[] calldata symbolHashes,
         uint256 _stalenessThreshold,
         uint256 _deviationThreshold,
         uint8 _minSourceCount
-    ) external onlySystemCall {
+    ) external {
         // Guard: only init once
         require(stalenessThreshold == 0, "OracleHub: already initialized");
         require(_stalenessThreshold > 0, "OracleHub: zero staleness");
@@ -127,15 +129,34 @@ contract OracleHub is IOracleHub, SystemContractBase {
         return (block.timestamp - pd.timestamp) <= stalenessThreshold;
     }
 
-    // ==================== Admin (System Call Only) ====================
+    // ==================== Admin (System Call or Operator) ====================
 
     /// @inheritdoc IOracleHub
-    function addSymbol(bytes32 symbolHash) external onlySystemCall {
+    /// @dev Callable by system call (admin) or operator for runtime symbol registration.
+    function addSymbol(bytes32 symbolHash) external {
+        require(_isSystemCallOrOperator(), "OracleHub: unauthorized");
         require(!isSymbolSupported[symbolHash], "OracleHub: already supported");
         isSymbolSupported[symbolHash] = true;
         _supportedSymbols.push(symbolHash);
         emit SymbolAdded(symbolHash);
     }
+
+    /// @inheritdoc IOracleHub
+    /// @dev Batch version of addSymbol. Skips already-supported symbols (no revert).
+    function batchAddSymbols(bytes32[] calldata symbolHashes) external {
+        require(_isSystemCallOrOperator(), "OracleHub: unauthorized");
+        require(symbolHashes.length > 0, "OracleHub: empty array");
+        for (uint256 i = 0; i < symbolHashes.length; i++) {
+            bytes32 h = symbolHashes[i];
+            if (!isSymbolSupported[h]) {
+                isSymbolSupported[h] = true;
+                _supportedSymbols.push(h);
+                emit SymbolAdded(h);
+            }
+        }
+    }
+
+    // ==================== Admin (System Call Only) ====================
 
     /// @inheritdoc IOracleHub
     function removeSymbol(bytes32 symbolHash) external onlySystemCall {
@@ -190,6 +211,13 @@ contract OracleHub is IOracleHub, SystemContractBase {
     }
 
     // ==================== Internal ====================
+
+    /// @notice Returns true if the caller is a system call or the operator.
+    function _isSystemCallOrOperator() internal view returns (bool) {
+        return SystemContractHelper.isSystemCall()
+            || SystemContractHelper.isSystemContract(msg.sender)
+            || msg.sender == operator;
+    }
 
     function _updatePrice(
         bytes32 symbolHash,

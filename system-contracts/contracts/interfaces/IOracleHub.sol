@@ -36,8 +36,10 @@ interface IOracleHub {
     function getPriceData(bytes32 symbolHash) external view returns (PriceData memory);
     function isPriceFresh(bytes32 symbolHash) external view returns (bool);
 
-    // --- Admin (system call only) ---
+    // --- Admin (system call or operator) ---
     function addSymbol(bytes32 symbolHash) external;
+    function batchAddSymbols(bytes32[] calldata symbolHashes) external;
+    // --- Admin (system call only) ---
     function removeSymbol(bytes32 symbolHash) external;
     function setConfig(uint256 stalenessThreshold, uint256 deviationThreshold, uint8 minSourceCount) external;
     function setOperator(address _operator) external;
