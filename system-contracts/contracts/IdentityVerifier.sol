@@ -21,6 +21,17 @@ contract IdentityVerifier is IIdentityVerifier, SystemContractBase {
     mapping(uint8 => address) private _circuitVerifiers;
     mapping(bytes32 => bool) private _usedProofs;
 
+    // ── Selective Disclosure Storage ──────────────────────────
+    struct DisclosurePolicy {
+        bytes32 credentialType;
+        bytes32[] requiredAttributes;
+        uint8 circuitType;
+        bool active;
+    }
+
+    mapping(bytes32 => DisclosurePolicy) private _disclosurePolicies;
+    mapping(address => mapping(bytes32 => bool)) private _disclosureResults;
+
     // ── Errors ─────────────────────────────────────────────────
     error IssuerNotTrusted(address issuer);
     error IdentityNotActive(address identity);
@@ -29,6 +40,9 @@ contract IdentityVerifier is IIdentityVerifier, SystemContractBase {
     error CircuitNotRegistered(uint8 circuitType);
     error ProofAlreadyUsed(bytes32 proofHash);
     error InvalidProof();
+    error PolicyAlreadyExists(bytes32 policyId);
+    error PolicyNotFound(bytes32 policyId);
+    error PolicyNotActive(bytes32 policyId);
 
     // ── Storage: Init Guard ────────────────────────────────────
     bool private _initialized;
@@ -244,6 +258,86 @@ contract IdentityVerifier is IIdentityVerifier, SystemContractBase {
     /// @notice Get the verifier address for a circuit type.
     function getCircuitVerifier(uint8 circuitType) external view override returns (address) {
         return _circuitVerifiers[circuitType];
+    }
+
+    // ── Selective Disclosure ──────────────────────────────────
+
+    /// @notice Register a disclosure policy. Only bootloader (governor).
+    function registerDisclosurePolicy(
+        bytes32 policyId,
+        bytes32 credentialType,
+        bytes32[] calldata requiredAttributes,
+        uint8 circuitType
+    ) external override onlyCallFromBootloader {
+        if (_disclosurePolicies[policyId].active) revert PolicyAlreadyExists(policyId);
+        if (_circuitVerifiers[circuitType] == address(0)) revert CircuitNotRegistered(circuitType);
+
+        DisclosurePolicy storage policy = _disclosurePolicies[policyId];
+        policy.credentialType = credentialType;
+        policy.circuitType = circuitType;
+        policy.active = true;
+        for (uint256 i = 0; i < requiredAttributes.length; i++) {
+            policy.requiredAttributes.push(requiredAttributes[i]);
+        }
+
+        emit DisclosurePolicyRegistered(policyId, credentialType, circuitType);
+    }
+
+    /// @notice Verify a selective disclosure proof against a policy.
+    function verifySelectiveDisclosure(
+        address identity,
+        bytes32 policyId,
+        uint256[2] calldata pA,
+        uint256[2][2] calldata pB,
+        uint256[2] calldata pC,
+        uint256[] calldata publicInputs
+    ) external override onlySystemCall returns (bool) {
+        if (!_didRegistry().isActive(identity)) revert IdentityNotActive(identity);
+
+        DisclosurePolicy storage policy = _disclosurePolicies[policyId];
+        if (!policy.active) revert PolicyNotActive(policyId);
+
+        address verifierAddr = _circuitVerifiers[policy.circuitType];
+        if (verifierAddr == address(0)) revert CircuitNotRegistered(policy.circuitType);
+
+        // Replay protection
+        bytes32 proofHash = keccak256(abi.encode(identity, policyId, pA, pB, pC, publicInputs));
+        if (_usedProofs[proofHash]) revert ProofAlreadyUsed(proofHash);
+
+        // Verify proof via staticcall
+        (bool ok, bytes memory result) = verifierAddr.staticcall(
+            abi.encodeWithSignature(
+                "verifyProof(uint256[2],uint256[2][2],uint256[2],uint256[])",
+                pA, pB, pC, publicInputs
+            )
+        );
+        if (!ok || result.length < 32) revert InvalidProof();
+        bool valid = abi.decode(result, (bool));
+        if (!valid) revert InvalidProof();
+
+        _usedProofs[proofHash] = true;
+        _disclosureResults[identity][policyId] = true;
+
+        // Set compliance key for cross-contract queries
+        bytes32 complianceKey = keccak256(abi.encodePacked("SD_", policyId));
+        _compliance[identity][complianceKey] = true;
+        emit ComplianceUpdated(identity, complianceKey, true);
+        emit SelectiveDisclosureVerified(identity, policyId);
+
+        return true;
+    }
+
+    /// @notice Check if an identity has a valid selective disclosure for a policy.
+    function hasValidDisclosure(address identity, bytes32 policyId) external view override returns (bool) {
+        return _disclosureResults[identity][policyId];
+    }
+
+    /// @notice Get a disclosure policy's details.
+    function getDisclosurePolicy(bytes32 policyId) external view override returns (
+        bytes32 credentialType, bytes32[] memory requiredAttributes, uint8 circuitType, bool active
+    ) {
+        DisclosurePolicy storage policy = _disclosurePolicies[policyId];
+        return (policy.credentialType, policy.requiredAttributes, policy.circuitType, policy.active);
     }
 
     // ── Credit Score Queries ────────────────────────────────────

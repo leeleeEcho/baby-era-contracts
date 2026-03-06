@@ -38,6 +38,15 @@ interface IIdentityVerifier {
     event ZKProofVerified(address indexed identity, uint8 indexed circuitType);
     event CircuitVerifierSet(uint8 indexed circuitType, address verifier);
 
+    // ── Selective Disclosure ─────────────────────────────────
+    event DisclosurePolicyRegistered(bytes32 indexed policyId, bytes32 credentialType, uint8 circuitType);
+    event SelectiveDisclosureVerified(address indexed identity, bytes32 indexed policyId);
+
+    function registerDisclosurePolicy(bytes32 policyId, bytes32 credentialType, bytes32[] calldata requiredAttributes, uint8 circuitType) external;
+    function verifySelectiveDisclosure(address identity, bytes32 policyId, uint256[2] calldata pA, uint256[2][2] calldata pB, uint256[2] calldata pC, uint256[] calldata publicInputs) external returns (bool);
+    function hasValidDisclosure(address identity, bytes32 policyId) external view returns (bool);
+    function getDisclosurePolicy(bytes32 policyId) external view returns (bytes32 credentialType, bytes32[] memory requiredAttributes, uint8 circuitType, bool active);
+
     function verifyZKProof(
         address identity, uint8 circuitType,
         uint256[2] calldata _pA, uint256[2][2] calldata _pB, uint256[2] calldata _pC,
