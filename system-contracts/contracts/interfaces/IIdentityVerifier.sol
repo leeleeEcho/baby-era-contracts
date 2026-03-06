@@ -25,6 +25,15 @@ interface IIdentityVerifier {
     function setVerificationMode(VerificationMode mode) external;
     function currentMode() external view returns (VerificationMode);
 
+    // ── Initialization ──────────────────────────────────────────
+    event Initialized(uint8 circuitCount, uint8 issuerCount);
+
+    function initialize(
+        uint8[] calldata circuitTypes,
+        address[] calldata verifiers,
+        address[] calldata trustedIssuers
+    ) external;
+
     // ── ZK Proof Verification ───────────────────────────────────
     event ZKProofVerified(address indexed identity, uint8 indexed circuitType);
     event CircuitVerifierSet(uint8 indexed circuitType, address verifier);

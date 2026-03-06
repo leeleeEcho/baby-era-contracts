@@ -30,9 +30,38 @@ contract IdentityVerifier is IIdentityVerifier, SystemContractBase {
     error ProofAlreadyUsed(bytes32 proofHash);
     error InvalidProof();
 
+    // ── Storage: Init Guard ────────────────────────────────────
+    bool private _initialized;
+
     // ── Constructor ────────────────────────────────────────────
 
     // System contracts don't use constructors — state is set at genesis or via admin calls.
+
+    // ── Initialization ───────────────────────────────────────────
+
+    /// @notice One-time initialization. No modifier — same pattern as OracleHub.
+    ///         Called post-genesis by governor to register circuit verifiers and trusted issuers.
+    function initialize(
+        uint8[] calldata circuitTypes,
+        address[] calldata verifiers,
+        address[] calldata trustedIssuers
+    ) external override {
+        require(!_initialized, "IdentityVerifier: already initialized");
+        require(circuitTypes.length == verifiers.length, "IdentityVerifier: length mismatch");
+
+        for (uint256 i = 0; i < circuitTypes.length; i++) {
+            _circuitVerifiers[circuitTypes[i]] = verifiers[i];
+            emit CircuitVerifierSet(circuitTypes[i], verifiers[i]);
+        }
+
+        for (uint256 i = 0; i < trustedIssuers.length; i++) {
+            _trustedIssuers[trustedIssuers[i]] = true;
+            emit TrustedIssuerAdded(trustedIssuers[i]);
+        }
+
+        _initialized = true;
+        emit Initialized(uint8(circuitTypes.length), uint8(trustedIssuers.length));
+    }
 
     // ── Internal Helpers ───────────────────────────────────────
 
