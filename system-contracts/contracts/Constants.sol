@@ -120,6 +120,9 @@ address constant CREDENTIAL_REGISTRY_SYSTEM_CONTRACT = address(SYSTEM_CONTRACTS_
 /// @dev The address of the IdentityVerifier system contract.
 address constant IDENTITY_VERIFIER_SYSTEM_CONTRACT = address(SYSTEM_CONTRACTS_OFFSET + 0x19);
 
+/// @dev The address of the EnterpriseIAM system contract.
+address constant ENTERPRISE_IAM_SYSTEM_CONTRACT = address(SYSTEM_CONTRACTS_OFFSET + 0x1a);
+
 ICreate2Factory constant L2_CREATE2_FACTORY = ICreate2Factory(address(USER_CONTRACTS_OFFSET));
 IL2AssetRouter constant L2_ASSET_ROUTER = IL2AssetRouter(address(USER_CONTRACTS_OFFSET + 0x03));
 IBridgehub constant L2_BRIDGE_HUB = IBridgehub(address(USER_CONTRACTS_OFFSET + 0x02));
