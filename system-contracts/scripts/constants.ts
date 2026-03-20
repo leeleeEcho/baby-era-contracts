@@ -265,6 +265,48 @@ export const SYSTEM_CONTRACTS: ISystemContracts = {
     lang: Language.Solidity,
     location: SourceLocation.L1Contracts,
   },
+  L2InteropRootStorage: {
+    address: "0x0000000000000000000000000000000000010008",
+    codeName: "L2InteropRootStorage",
+    lang: Language.Solidity,
+    location: SourceLocation.SystemContracts,
+  },
+  L2MessageVerification: {
+    address: "0x0000000000000000000000000000000000010009",
+    codeName: "L2MessageVerification",
+    lang: Language.Solidity,
+    location: SourceLocation.L1Contracts,
+  },
+  ChainAssetHandler: {
+    address: "0x000000000000000000000000000000000001000a",
+    codeName: "ChainAssetHandler",
+    lang: Language.Solidity,
+    location: SourceLocation.L1Contracts,
+  },
+  identity: {
+    address: "0x0000000000000000000000000000000000000004",
+    codeName: "Identity",
+    lang: Language.Yul,
+    path: "precompiles",
+  },
+  evmGasManager: {
+    address: "0x0000000000000000000000000000000000008013",
+    codeName: "EvmGasManager",
+    lang: Language.Yul,
+    path: "",
+  },
+  evmPredeploysManager: {
+    address: "0x0000000000000000000000000000000000008014",
+    codeName: "EvmPredeploysManager",
+    lang: Language.Solidity,
+    location: SourceLocation.SystemContracts,
+  },
+  evmHashesStorage: {
+    address: "0x0000000000000000000000000000000000008015",
+    codeName: "EvmHashesStorage",
+    lang: Language.Solidity,
+    location: SourceLocation.SystemContracts,
+  },
   // BabyDriver: Oracle Hub system contract
   oracleHub: {
     address: "0x0000000000000000000000000000000000008016",
@@ -287,6 +329,12 @@ export const SYSTEM_CONTRACTS: ISystemContracts = {
   identityVerifier: {
     address: "0x0000000000000000000000000000000000008019",
     codeName: "IdentityVerifier",
+    lang: Language.Solidity,
+    location: SourceLocation.SystemContracts,
+  },
+  enterpriseIAM: {
+    address: "0x000000000000000000000000000000000000801a",
+    codeName: "EnterpriseIAM",
     lang: Language.Solidity,
     location: SourceLocation.SystemContracts,
   },
